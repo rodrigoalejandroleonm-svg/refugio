@@ -145,6 +145,26 @@ h1, h2, h3, .display {
 .msg.risk ul { margin: 8px 0 0 0; padding-left: 18px; }
 .msg.risk li { margin-bottom: 4px; }
 
+.msg-row { display: flex; align-items: flex-end; gap: 8px; }
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.avatar-tristeza { background: #C7DCEA; }
+.avatar-ansiedad { background: #CFE6E2; }
+.avatar-enojo { background: #F3D9C9; }
+.avatar-alegria { background: #FCEFC7; }
+.avatar-cansancio { background: #DAD6EA; }
+.avatar-neutral { background: var(--cream-deep); }
+
 .chat-input-row { display: flex; gap: 10px; margin-top: 14px; }
 
 .chat-input-row input {
@@ -214,6 +234,57 @@ textarea#diary-note:focus { border-color: var(--clay); }
 .diary-card .meta { font-size: 12px; color: var(--ink-soft); margin-bottom: 6px; }
 
 .stats-row { display: flex; gap: 16px; margin: 20px 0 30px 0; }
+
+/* ---------- Insignia de progreso (3 etapas) ---------- */
+.progress-badge {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 20px 24px;
+  margin-bottom: 22px;
+}
+
+.progress-badge-icon {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+}
+
+.progress-badge-icon svg { width: 100%; height: 100%; }
+
+.progress-badge-text { flex: 1; }
+
+.progress-badge-label {
+  font-family: 'Fraunces', serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.progress-badge-desc {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+}
+
+.progress-badge-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--cream-deep);
+  overflow: hidden;
+}
+
+.progress-badge-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--sage), var(--clay));
+  transition: width 0.5s ease;
+}
 
 .stat-card { flex: 1; background: var(--card); border-radius: var(--radius-md); padding: 16px 20px; box-shadow: var(--shadow); }
 .stat-card .value { font-family: 'Fraunces', serif; font-size: 26px; color: var(--clay-deep); }
@@ -540,6 +611,17 @@ textarea#diary-note:focus { border-color: var(--clay); }
       <h1 class="screen-title">Tu diario</h1>
       <p class="screen-subtitle">Un registro simple de tus días.</p>
 
+      <div class="progress-badge" id="progress-badge">
+        <div class="progress-badge-icon" id="progress-badge-icon"></div>
+        <div class="progress-badge-text">
+          <div class="progress-badge-label" id="progress-badge-label">Recién empezando</div>
+          <div class="progress-badge-desc" id="progress-badge-desc">Cada día que registras cuenta.</div>
+          <div class="progress-badge-track">
+            <div class="progress-badge-fill" id="progress-badge-fill"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="stats-row">
         <div class="stat-card"><div class="value" id="stat-streak">0</div><div class="label">Racha de días</div></div>
         <div class="stat-card"><div class="value" id="stat-avg">—</div><div class="label">Promedio semanal (1-5)</div></div>
@@ -821,6 +903,80 @@ const EmotionBrain = (() => {
 </script>
 
 <!-- ================================================================ -->
+<!-- CEREBRO 4b: ProgressBrain — insignia visual de 3 etapas           -->
+<!-- ================================================================ -->
+<script>
+/**
+ * ProgressBrain
+ * -------------
+ * Traduce la racha de días (que calcula EmotionBrain) en una etapa visual:
+ * "Recién empezando" → "En camino" → "Recuperado/a". Solo decide el icono
+ * y el texto, no sabe nada de cómo se guardan los datos.
+ */
+const ProgressBrain = (() => {
+  const STAGES = [
+    {
+      id: 'inicio',
+      minStreak: 0,
+      label: 'Recién empezando',
+      desc: 'Cada día que registras cuenta. Vas construyendo el hábito.',
+      icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="30" fill="#DCE9F2"/>
+        <path d="M32 40 C32 40 24 34 24 26 C24 21 27 18 32 18 C37 18 40 21 40 26 C40 34 32 40 32 40 Z" fill="#6FA9A3"/>
+        <circle cx="32" cy="26" r="3" fill="#FBFDFE"/>
+      </svg>`
+    },
+    {
+      id: 'intermedio',
+      minStreak: 4,
+      label: 'En camino',
+      desc: 'Ya llevas varios días seguidos. Se nota el esfuerzo.',
+      icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="30" fill="#DCE9F2"/>
+        <path d="M32 46 V24" stroke="#4F8983" stroke-width="3" stroke-linecap="round"/>
+        <path d="M32 30 C32 30 22 28 20 20 C28 18 32 26 32 30 Z" fill="#6FA9A3"/>
+        <path d="M32 26 C32 26 42 24 44 16 C36 14 32 22 32 26 Z" fill="#7FB8B1"/>
+      </svg>`
+    },
+    {
+      id: 'recuperado',
+      minStreak: 14,
+      label: 'Recuperado/a',
+      desc: 'Tu constancia se refleja aquí. Sigue cuidándote, un día a la vez.',
+      icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="30" fill="#DCE9F2"/>
+        <path d="M32 48 V22" stroke="#2C5F84" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="32" cy="18" r="9" fill="#3E7CA6"/>
+        <circle cx="20" cy="26" r="7" fill="#6FA9A3"/>
+        <circle cx="44" cy="26" r="7" fill="#6FA9A3"/>
+        <circle cx="32" cy="18" r="3.5" fill="#FBFDFE"/>
+      </svg>`
+    }
+  ];
+
+  function getStage(streakDays) {
+    let current = STAGES[0];
+    for (const stage of STAGES) {
+      if (streakDays >= stage.minStreak) current = stage;
+    }
+    return current;
+  }
+
+  function getProgressToNextStage(streakDays) {
+    const idx = STAGES.findIndex((s) => s.id === getStage(streakDays).id);
+    const next = STAGES[idx + 1];
+    if (!next) return 100; // ya está en la última etapa
+    const prev = STAGES[idx];
+    const span = next.minStreak - prev.minStreak;
+    const progressed = streakDays - prev.minStreak;
+    return Math.min(100, Math.round((progressed / span) * 100));
+  }
+
+  return { getStage, getProgressToNextStage };
+})();
+</script>
+
+<!-- ================================================================ -->
 <!-- CEREBRO 5: WellnessBrain — ejercicios de respiración              -->
 <!-- ================================================================ -->
 <script>
@@ -896,33 +1052,48 @@ const ChatBrain = (() => {
     tristeza: [
       'Ay, siento mucho que te sientas así 💙 Gracias por confiar en mí para contármelo. ¿Quieres contarme qué pasó?',
       'Está bien sentirse así, de verdad. No estás solo/a en esto. ¿Desde cuándo te sientes de esta manera?',
-      'Te escucho con todo el cariño. A veces solo hace falta soltarlo. ¿Qué es lo que más te pesa ahorita?'
+      'Te escucho con todo el cariño. A veces solo hace falta soltarlo. ¿Qué es lo que más te pesa ahorita?',
+      '¿Hay algo puntual que haya pasado hoy, o es más una sensación que se ha ido acumulando?',
+      'A veces la tristeza tiene un motivo claro, y a veces no. ¿Sabes qué la disparó, o simplemente llegó así?',
+      'Te mereces sentirte acompañado/a en esto. ¿Hay alguien más en tu vida con quien hayas hablado de esto?'
     ],
     ansiedad: [
       'Uy, eso suena agotador para la mente y el cuerpo 🌿 ¿Qué es lo que más te preocupa en este momento?',
       'Tiene todo el sentido sentirse así con tanto encima. Vamos con calma, un paso a la vez. ¿Quieres que hagamos juntos un ejercicio de respiración?',
-      'Respira, estoy aquí contigo. ¿Me cuentas qué es lo que te tiene tan inquieto/a?'
+      'Respira, estoy aquí contigo. ¿Me cuentas qué es lo que te tiene tan inquieto/a?',
+      '¿Es algo que puedes controlar, o es más una preocupación sobre algo que todavía no pasa?',
+      '¿Dónde sientes esa ansiedad en el cuerpo ahorita? A veces ponerle atención a eso ayuda a bajarla un poco.',
+      '¿Esto viene de algo puntual (un examen, una decisión, una noticia) o es más una sensación de fondo?'
     ],
     enojo: [
       'Se nota que esto te afectó de verdad, y es totalmente válido sentirlo. ¿Qué fue lo que pasó?',
       'Tu rabia tiene sentido, no tienes que disculparte por sentirla. Cuéntame más si quieres.',
-      'Entiendo que estés molesto/a. Aquí puedes soltarlo sin filtro, te escucho.'
+      'Entiendo que estés molesto/a. Aquí puedes soltarlo sin filtro, te escucho.',
+      '¿Es rabia con alguien en particular, o más con una situación en general?',
+      '¿Qué necesitabas que pasara distinto, y no pasó?',
+      'A veces el enojo tapa otra emoción debajo (tristeza, miedo). ¿Sientes que puede ser ese el caso aquí?'
     ],
     alegria: [
       '¡Qué lindo leer eso! 😊 Me alegra muchísimo por ti. ¿Qué fue lo que más disfrutaste?',
       'Eso me llena el corazón. ¿Quieres anotarlo en tu diario para recordarlo en un día difícil?',
-      '¡Qué bonito! Cuéntame más, quiero saber todos los detalles 💛'
+      '¡Qué bonito! Cuéntame más, quiero saber todos los detalles 💛',
+      '¿Hay alguien con quien quieras compartir esta buena noticia?',
+      '¿Qué hiciste tú para que esto pasara? A veces se nos olvida darnos crédito.'
     ],
     cansancio: [
       'Suena como que de verdad necesitas un respiro, y te lo mereces 🌙 ¿Has podido descansar últimamente?',
       'El cansancio acumulado pesa más de lo que parece. ¿Probamos un ejercicio cortito de relajación juntos?',
-      'Cuídate, por favor. ¿Qué pequeña cosa te ayudaría a sentirte un poco mejor ahorita?'
+      'Cuídate, por favor. ¿Qué pequeña cosa te ayudaría a sentirte un poco mejor ahorita?',
+      '¿Es más cansancio del cuerpo, o sientes que también es mental/emocional?',
+      '¿Hace cuánto que no te das un espacio solo para ti, sin hacer nada más?'
     ],
     neutral: [
       'Cuéntame más, te escucho con toda la calma del mundo 💙',
       '¿Cómo te gustaría que te acompañe hoy?',
       'Aquí estoy, sin apuro. ¿Qué tienes en mente?',
-      'Me da mucho gusto que estés aquí. ¿Qué quieres compartir hoy?'
+      'Me da mucho gusto que estés aquí. ¿Qué quieres compartir hoy?',
+      '¿Cómo ha estado tu día, de verdad? No la respuesta rápida, la real.',
+      '¿Hay algo que te gustaría soltar o pensar en voz alta ahorita?'
     ]
   };
 
@@ -935,10 +1106,12 @@ const ChatBrain = (() => {
   }
 
   const SYSTEM_PROMPT = `Eres el acompañante emocional de la app "Refugio", una app de bienestar peruana.
-Hablas español de Perú, cálido, dulce y cercano — como una amiga o amigo de confianza, nunca como un robot ni como un terapeuta clínico.
-Tu trabajo es escuchar, validar lo que la persona siente, y hacer una pregunta suave para que siga contando si quiere.
-No das diagnósticos ni consejos médicos. No tienes que resolver todo — a veces solo acompañar ya ayuda.
-Mantén tus respuestas cortas: 2 a 4 oraciones, tono suave y humano, sin sonar formal ni robótico.`;
+Hablas español de Perú, cálido, dulce y cercano — como una amiga o amigo de confianza, nunca como un robot ni como un terapeuta clínico. No eres psicólogo/a ni das diagnósticos ni tratamiento — eso lo dejas siempre a profesionales reales.
+Tu trabajo es escuchar de verdad y hacer UNA pregunta de seguimiento genuina y específica según lo que la persona acaba de contar — no una pregunta genérica de relleno.
+Adapta tu pregunta a la emoción detectada: si hay tristeza, pregunta con delicadeza qué la originó o hace cuánto se siente así; si hay ansiedad, pregunta qué la dispara o dónde la siente en el cuerpo; si hay enojo, pregunta qué necesitaba que fuera distinto; si hay alegría, celebra y pregunta con quién lo compartiría.
+Valida la emoción antes de preguntar (una frase corta), nunca la minimices ni la arregles de inmediato.
+No tienes que resolver todo — a veces solo acompañar ya ayuda.
+Mantén tus respuestas cortas: 2 a 4 oraciones, tono suave y humano, sin sonar formal ni robótico ni como cuestionario.`;
 
   async function generateResponse(text, history = [], apiKey = null) {
     if (!apiKey) {
@@ -1145,21 +1318,59 @@ function switchScreen(name) {
 const chatWindow = document.getElementById('chat-window');
 const chatInput = document.getElementById('chat-input');
 
-function appendMessage(text, cssClass) {
-  const div = document.createElement('div');
-  div.className = `msg ${cssClass}`;
-  div.textContent = text;
-  chatWindow.appendChild(div);
+const EMOTION_ICONS = {
+  tristeza: '💧',
+  ansiedad: '🌊',
+  enojo: '🔥',
+  alegria: '☀️',
+  cansancio: '🌙',
+  neutral: '🍃'
+};
+
+function appendMessage(text, cssClass, emotion = 'neutral') {
+  if (cssClass === 'user') {
+    const div = document.createElement('div');
+    div.className = `msg ${cssClass}`;
+    div.textContent = text;
+    chatWindow.appendChild(div);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+    return div;
+  }
+
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+
+  const avatar = document.createElement('div');
+  avatar.className = `avatar avatar-${emotion}`;
+  avatar.textContent = EMOTION_ICONS[emotion] || EMOTION_ICONS.neutral;
+
+  const bubble = document.createElement('div');
+  bubble.className = `msg ${cssClass}`;
+  bubble.textContent = text;
+
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  chatWindow.appendChild(row);
   chatWindow.scrollTop = chatWindow.scrollHeight;
-  return div;
+  return bubble;
 }
 
 function appendRiskMessage(riskInfo) {
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar avatar-tristeza';
+  avatar.textContent = '🤍';
+
   const div = document.createElement('div');
   div.className = 'msg risk';
   const list = riskInfo.resources.map((r) => `<li><strong>${r.label}</strong> — ${r.detail}</li>`).join('');
   div.innerHTML = `${riskInfo.opener}<ul>${list}</ul><div style="margin-top:8px">${riskInfo.closing}</div>`;
-  chatWindow.appendChild(div);
+
+  row.appendChild(avatar);
+  row.appendChild(div);
+  chatWindow.appendChild(row);
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
@@ -1194,10 +1405,17 @@ async function sendChatMessage() {
   const typingEl = appendMessage('escribiendo...', 'ai');
   typingEl.style.opacity = '0.6';
 
-  const { reply } = await ChatBrain.generateResponse(text, chatHistory, getGroqKey());
+  const { reply, emotion } = await ChatBrain.generateResponse(text, chatHistory, getGroqKey());
 
   typingEl.textContent = reply;
   typingEl.style.opacity = '1';
+
+  const avatarEl = typingEl.parentElement?.querySelector('.avatar');
+  if (avatarEl) {
+    avatarEl.className = `avatar avatar-${emotion}`;
+    avatarEl.textContent = EMOTION_ICONS[emotion] || EMOTION_ICONS.neutral;
+  }
+
   chatWindow.scrollTop = chatWindow.scrollHeight;
 
   chatHistory.push({ role: 'user', content: text });
@@ -1247,6 +1465,13 @@ function renderDiary() {
   document.getElementById('stat-avg').textContent = avg !== null ? avg : '—';
   document.getElementById('stat-hardest').textContent = hardest || '—';
   document.getElementById('sidebar-streak').textContent = streak;
+
+  const stage = ProgressBrain.getStage(streak);
+  const progressPct = ProgressBrain.getProgressToNextStage(streak);
+  document.getElementById('progress-badge-icon').innerHTML = stage.icon;
+  document.getElementById('progress-badge-label').textContent = stage.label;
+  document.getElementById('progress-badge-desc').textContent = stage.desc;
+  document.getElementById('progress-badge-fill').style.width = `${progressPct}%`;
 
   const container = document.getElementById('diary-entries');
   container.innerHTML = '';
