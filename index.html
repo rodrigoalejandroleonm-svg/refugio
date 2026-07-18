@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Refugio — MVP</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3E7CA6">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Refugio">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Sora:wght@400;500;600;700&display=swap');
+
+:root {
+  --cream: #EAF2F7;
+  --cream-deep: #DCE9F2;
+  --clay: #3E7CA6;
+  --clay-deep: #2C5F84;
+  --sage: #6FA9A3;
+  --sage-deep: #4F8983;
+  --ink: #22303B;
+  --ink-soft: #5C7284;
+  --card: #FBFDFE;
+  --line: rgba(34, 48, 59, 0.09);
+  --shadow: 0 12px 32px rgba(34, 68, 92, 0.10);
+  --radius-lg: 28px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: 'Sora', sans-serif;
+}
+
+body {
+  background-image:
+    radial-gradient(ellipse 60% 40% at 15% 10%, rgba(111, 169, 163, 0.16), transparent 55%),
+    radial-gradient(ellipse 55% 45% at 90% 20%, rgba(62, 124, 166, 0.14), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(62, 124, 166, 0.10), transparent 60%),
+    linear-gradient(180deg, #EAF2F7 0%, #E3EEF4 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+h1, h2, h3, .display {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.app-shell { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  padding: 32px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-right: 1px solid var(--line);
+}
+
+.brand {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 28px;
+  color: var(--clay-deep);
+  margin: 0 0 6px 4px;
+}
+
+.brand-sub { font-size: 12px; color: var(--ink-soft); margin: 0 0 32px 4px; letter-spacing: 0.03em; }
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-family: 'Sora', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.nav-btn:hover { background: var(--cream-deep); }
+.nav-btn.active { background: var(--clay); color: white; }
+
+.streak-pill {
+  margin-top: auto;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.streak-pill strong { display: block; font-family: 'Fraunces', serif; font-size: 22px; color: var(--clay-deep); }
+
+.main { flex: 1; padding: 40px 48px; max-width: 880px; }
+
+.screen { display: none; }
+.screen.active { display: block; animation: fadeIn 0.35s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.screen-title { margin: 0 0 4px 0; font-size: 30px; }
+.screen-subtitle { margin: 0 0 28px 0; color: var(--ink-soft); font-size: 15px; }
+
+.chat-window {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.msg { max-width: 70%; padding: 12px 16px; border-radius: var(--radius-md); font-size: 14.5px; line-height: 1.5; }
+.msg.user { align-self: flex-end; background: var(--clay); color: white; border-bottom-right-radius: 4px; }
+.msg.ai { align-self: flex-start; background: var(--cream-deep); color: var(--ink); border-bottom-left-radius: 4px; }
+.msg.risk { align-self: flex-start; background: #FBEFE9; border: 1px solid var(--clay); color: var(--ink); max-width: 85%; }
+.msg.risk ul { margin: 8px 0 0 0; padding-left: 18px; }
+.msg.risk li { margin-bottom: 4px; }
+
+.chat-input-row { display: flex; gap: 10px; margin-top: 14px; }
+
+.chat-input-row input {
+  flex: 1;
+  padding: 14px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-family: 'Sora', sans-serif;
+  font-size: 14.5px;
+  outline: none;
+}
+
+.chat-input-row input:focus { border-color: var(--clay); }
+
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 14px 24px;
+  background: var(--clay);
+  color: white;
+  font-family: 'Sora', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.btn:hover { background: var(--clay-deep); }
+.btn:active { transform: scale(0.97); }
+.btn.secondary { background: var(--sage); }
+.btn.secondary:hover { background: var(--sage-deep); }
+
+.mood-picker { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+
+.mood-btn {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  font-size: 22px;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.mood-btn:hover { transform: translateY(-3px); }
+.mood-btn.selected { border-color: var(--clay); background: var(--cream-deep); }
+
+textarea#diary-note {
+  width: 100%;
+  min-height: 120px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-family: 'Sora', sans-serif;
+  font-size: 14.5px;
+  resize: vertical;
+  outline: none;
+}
+
+textarea#diary-note:focus { border-color: var(--clay); }
+
+.diary-entries { margin-top: 32px; display: flex; flex-direction: column; gap: 12px; }
+
+.diary-card { background: var(--card); border-radius: var(--radius-md); padding: 16px 20px; box-shadow: var(--shadow); }
+.diary-card .meta { font-size: 12px; color: var(--ink-soft); margin-bottom: 6px; }
+
+.stats-row { display: flex; gap: 16px; margin: 20px 0 30px 0; }
+
+.stat-card { flex: 1; background: var(--card); border-radius: var(--radius-md); padding: 16px 20px; box-shadow: var(--shadow); }
+.stat-card .value { font-family: 'Fraunces', serif; font-size: 26px; color: var(--clay-deep); }
+.stat-card .label { font-size: 12px; color: var(--ink-soft); }
+
+.exercise-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+
+.exercise-card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.exercise-card:hover { transform: translateY(-4px); }
+.exercise-card h3 { margin: 0 0 6px 0; font-size: 18px; }
+.exercise-card p { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+
+.breathing-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(34, 48, 59, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.breathing-overlay.active { display: flex; }
+
+.breathing-card { background: var(--cream); border-radius: var(--radius-lg); padding: 48px; text-align: center; width: 340px; }
+
+.breathing-circle {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--sage), var(--sage-deep));
+  margin: 20px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  transition: transform 1s ease;
+}
+
+.breathing-circle.inhale { transform: scale(1.25); }
+.breathing-circle.exhale { transform: scale(0.85); }
+
+.timer-label { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
+
+/* ---------- Bienvenida: una pregunta a la vez ---------- */
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 20%, rgba(111, 169, 163, 0.25), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 85% 80%, rgba(62, 124, 166, 0.28), transparent 55%),
+    linear-gradient(180deg, #DCE9F2 0%, #C9DEEA 100%);
+}
+
+.welcome-card {
+  width: 460px;
+  max-width: 90vw;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(34, 68, 92, 0.18);
+  padding: 40px 40px 32px;
+  text-align: center;
+}
+
+.welcome-step { display: none; animation: fadeIn 0.35s ease; }
+.welcome-step.active { display: block; }
+
+.welcome-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sage-deep);
+  margin-bottom: 10px;
+}
+
+.welcome-question {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-style: italic;
+  margin: 0 0 24px 0;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.welcome-mood-row { display: flex; justify-content: center; gap: 12px; margin-bottom: 8px; }
+.welcome-mood-row .mood-btn { font-size: 26px; padding: 14px 16px; }
+
+.welcome-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--cream);
+  font-family: 'Sora', sans-serif;
+  font-size: 14.5px;
+  resize: vertical;
+  outline: none;
+  margin-bottom: 8px;
+}
+
+.welcome-textarea:focus { border-color: var(--clay); }
+
+.welcome-progress { display: flex; justify-content: center; gap: 6px; margin: 20px 0 24px; }
+.welcome-progress .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: background 0.2s ease; }
+.welcome-progress .dot.done { background: var(--clay); }
+
+.welcome-actions { display: flex; justify-content: center; gap: 10px; }
+.welcome-actions .btn.ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
+.welcome-actions .btn.ghost:hover { background: var(--cream-deep); }
+
+/* ---------- Pantalla de carga inicial (10s, configura la IA sola) ---------- */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 20%, rgba(111, 169, 163, 0.25), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 85% 80%, rgba(62, 124, 166, 0.28), transparent 55%),
+    linear-gradient(180deg, #DCE9F2 0%, #C9DEEA 100%);
+}
+
+.loading-card { text-align: center; }
+
+.loading-brand {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 34px;
+  color: var(--clay-deep);
+  margin: 0 0 6px 0;
+}
+
+.loading-sub {
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin: 0 0 28px 0;
+}
+
+.loading-pulse {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin: 0 auto;
+  background: radial-gradient(circle at 35% 30%, var(--sage), var(--sage-deep));
+  animation: loadingPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes loadingPulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.18); opacity: 1; }
+}
+
+/* ---------- Pantalla: consigue tu propia API key de Groq ---------- */
+.groqkey-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 20%, rgba(111, 169, 163, 0.25), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 85% 80%, rgba(62, 124, 166, 0.28), transparent 55%),
+    linear-gradient(180deg, #DCE9F2 0%, #C9DEEA 100%);
+}
+
+.groqkey-card {
+  width: 480px;
+  max-width: 92vw;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(34, 68, 92, 0.18);
+  padding: 36px 36px 28px;
+}
+
+.groqkey-card h2 {
+  font-size: 22px;
+  margin: 0 0 6px 0;
+}
+
+.groqkey-card .sub {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin: 0 0 22px 0;
+}
+
+.groqkey-steps {
+  margin: 0 0 22px 0;
+  padding-left: 20px;
+  font-size: 13.5px;
+  color: var(--ink);
+  line-height: 1.7;
+}
+
+.groqkey-steps li { margin-bottom: 4px; }
+
+.groqkey-input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.groqkey-input-row input {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--cream);
+  font-family: 'Sora', sans-serif;
+  font-size: 13.5px;
+  outline: none;
+}
+
+.groqkey-input-row input:focus { border-color: var(--clay); }
+
+.groqkey-skip {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  width: 100%;
+}
+</style>
+</head>
+<body>
+
+<!-- Pantalla: consigue tu propia API key gratis de Groq -->
+<div class="groqkey-overlay" id="groqkey-overlay">
+  <div class="groqkey-card">
+    <h2>Antes de empezar</h2>
+    <p class="sub">Refugio usa una IA real y gratis (Groq). Solo toma 1 minuto conseguir tu propia key:</p>
+    <ol class="groqkey-steps">
+      <li>Dale clic al botón de abajo (se abre console.groq.com)</li>
+      <li>Crea una cuenta gratis (sin tarjeta) y verifica tu correo</li>
+      <li>Dale clic a "Create API Key" y ponle cualquier nombre</li>
+      <li>Copia la key que aparece (solo se muestra una vez)</li>
+      <li>Pégala aquí abajo</li>
+    </ol>
+    <a href="https://console.groq.com/keys" target="_blank" rel="noopener" class="btn" style="display:block; text-align:center; text-decoration:none; margin-bottom:16px;">
+      Abrir Groq y crear mi API key
+    </a>
+    <div class="groqkey-input-row">
+      <input type="text" id="groqkey-input" placeholder="Pega tu API key aquí...">
+      <button class="btn secondary" id="groqkey-save">Guardar</button>
+    </div>
+    <button class="groqkey-skip" id="groqkey-skip">Prefiero omitir esto por ahora</button>
+  </div>
+</div>
+
+<!-- Pantalla de carga inicial: aquí se configura la IA sola -->
+<div class="loading-overlay" id="loading-overlay" style="display:none">
+  <div class="loading-card">
+    <div class="loading-pulse"></div>
+    <p class="loading-brand" style="margin-top:20px">Refugio</p>
+    <p class="loading-sub" id="loading-status">Preparando tu espacio de bienestar...</p>
+  </div>
+</div>
+
+<!-- Bienvenida: preguntas previas al chat, una por una -->
+<div class="welcome-overlay" id="welcome-overlay" style="display:none">
+  <div class="welcome-card">
+    <div class="welcome-progress" id="welcome-progress"></div>
+    <div id="welcome-steps"></div>
+    <div class="welcome-actions">
+      <button class="btn ghost" id="welcome-back" style="display:none">Atrás</button>
+      <button class="btn" id="welcome-next">Continuar</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-shell" id="app-shell" style="display:none">
+
+  <aside class="sidebar">
+    <p class="brand">Refugio</p>
+    <p class="brand-sub">tu espacio de bienestar</p>
+
+    <button class="nav-btn active" data-screen="chat" onclick="switchScreen('chat')">💬 Chat</button>
+    <button class="nav-btn" data-screen="diario" onclick="switchScreen('diario')">📓 Diario</button>
+    <button class="nav-btn" data-screen="ejercicios" onclick="switchScreen('ejercicios')">🌿 Ejercicios</button>
+
+    <div class="streak-pill">
+      <strong id="sidebar-streak">0</strong>
+      días de racha registrando tu ánimo
+    </div>
+
+    <button class="nav-btn" id="settings-api-btn" style="margin-top:6px">⚙️ API key de Groq</button>
+  </aside>
+
+  <main class="main">
+
+    <section id="screen-chat" class="screen active">
+      <h1 class="screen-title">Conversemos</h1>
+      <p class="screen-subtitle">Cuéntame cómo estás. Sin juicios, sin apuro.</p>
+      <div class="chat-window" id="chat-window"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Escribe algo...">
+        <button class="btn" id="chat-send">Enviar</button>
+      </div>
+    </section>
+
+    <section id="screen-diario" class="screen">
+      <h1 class="screen-title">Tu diario</h1>
+      <p class="screen-subtitle">Un registro simple de tus días.</p>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="value" id="stat-streak">0</div><div class="label">Racha de días</div></div>
+        <div class="stat-card"><div class="value" id="stat-avg">—</div><div class="label">Promedio semanal (1-5)</div></div>
+        <div class="stat-card"><div class="value" id="stat-hardest">—</div><div class="label">Día más difícil</div></div>
+      </div>
+
+      <div class="mood-picker">
+        <button class="mood-btn" data-mood="muy_mal">😞</button>
+        <button class="mood-btn" data-mood="mal">🙁</button>
+        <button class="mood-btn" data-mood="neutral">😐</button>
+        <button class="mood-btn" data-mood="bien">🙂</button>
+        <button class="mood-btn" data-mood="muy_bien">😄</button>
+      </div>
+
+      <textarea id="diary-note" placeholder="¿Qué pasó hoy? (opcional)"></textarea>
+      <div style="margin-top:14px"><button class="btn secondary" id="diary-save">Guardar entrada</button></div>
+
+      <div id="diary-risk-box" class="msg risk" style="display:none; margin-top:20px;"></div>
+      <div class="diary-entries" id="diary-entries"></div>
+    </section>
+
+    <section id="screen-ejercicios" class="screen">
+      <h1 class="screen-title">Ejercicios de bienestar</h1>
+      <p class="screen-subtitle">Unos minutos para respirar.</p>
+      <div class="exercise-grid" id="exercise-grid"></div>
+    </section>
+
+  </main>
+</div>
+
+<div class="breathing-overlay" id="breathing-overlay">
+  <div class="breathing-card">
+    <h2 id="phase-label">Inhala</h2>
+    <div class="breathing-circle" id="breathing-circle"></div>
+    <div class="timer-label" id="timer-label"></div>
+    <button class="btn" id="breathing-close" style="margin-top:16px">Cerrar</button>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- CEREBRO 0: SetupBrain — configura la IA sola al abrir la app     -->
+<!-- ================================================================ -->
+<script>
+const SetupBrain = (() => {
+  // ⚠️ RODRIGO: reemplaza esto con tu propia API key gratis de Groq
+  // (la consigues en console.groq.com → API Keys). Sin esto, la app
+  // sigue funcionando, pero cae al motor de reglas en vez de la IA real.
+  const EMBEDDED_GROQ_KEY = 'PON_AQUI_TU_GROQ_API_KEY';
+
+  function ensureGroqKeyConfigured() {
+    const existing = StorageBrain.getValue('groq_api_key', null);
+    if (existing) return; // el usuario ya tiene una (por ejemplo, la pegó él mismo)
+
+    const isPlaceholder = !EMBEDDED_GROQ_KEY || EMBEDDED_GROQ_KEY.startsWith('PON_AQUI');
+    if (isPlaceholder) {
+      console.warn('SetupBrain: no hay key de Groq embebida todavía. El chat usará el motor local.');
+      return;
+    }
+    StorageBrain.setValue('groq_api_key', EMBEDDED_GROQ_KEY);
+  }
+
+  return { ensureGroqKeyConfigured };
+})();
+</script>
+
+<!-- ================================================================ -->
+<!-- CEREBRO 1: StorageBrain — capa de datos compartida                -->
+<!-- ================================================================ -->
+<script>
+const StorageBrain = (() => {
+  const NAMESPACE = 'mindwell_v1';
+  function _key(bucket) { return `${NAMESPACE}::${bucket}`; }
+
+  function getAll(bucket) {
+    try {
+      const raw = localStorage.getItem(_key(bucket));
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { console.error('StorageBrain.getAll error', bucket, e); return []; }
+  }
+
+  function saveAll(bucket, items) {
+    try { localStorage.setItem(_key(bucket), JSON.stringify(items)); return true; }
+    catch (e) { console.error('StorageBrain.saveAll error', bucket, e); return false; }
+  }
+
+  function append(bucket, item) {
+    const items = getAll(bucket);
+    items.push(item);
+    saveAll(bucket, items);
+    return item;
+  }
+
+  function clearBucket(bucket) { localStorage.removeItem(_key(bucket)); }
+
+  function clearEverything() {
+    Object.keys(localStorage).filter((k) => k.startsWith(NAMESPACE)).forEach((k) => localStorage.removeItem(k));
+  }
+
+  // Para valores simples de configuración (no listas), como una API key.
+  function getValue(key, fallback = null) {
+    try {
+      const raw = localStorage.getItem(_key(`setting_${key}`));
+      return raw !== null ? JSON.parse(raw) : fallback;
+    } catch (e) {
+      console.error('StorageBrain.getValue error', key, e);
+      return fallback;
+    }
+  }
+
+  function setValue(key, value) {
+    try {
+      localStorage.setItem(_key(`setting_${key}`), JSON.stringify(value));
+      return true;
+    } catch (e) {
+      console.error('StorageBrain.setValue error', key, e);
+      return false;
+    }
+  }
+
+  return { getAll, saveAll, append, clearBucket, clearEverything, getValue, setValue };
+})();
+</script>
+
+<!-- ================================================================ -->
+<!-- CEREBRO 2: OnboardingBrain — preguntas previas al chat            -->
+<!-- ================================================================ -->
+<script>
+const OnboardingBrain = (() => {
+  const BUCKET = 'onboarding_sessions';
+
+  const QUESTIONS = [
+    { id: 'mood', type: 'mood', eyebrow: 'Antes de empezar', prompt: '¿Cómo te sientes en este momento?' },
+    { id: 'thoughts', type: 'text', eyebrow: 'Un poco más', prompt: '¿En qué has estado pensando últimamente?' },
+    { id: 'expectation', type: 'text', eyebrow: 'Última pregunta', prompt: '¿Qué te gustaría sacar de esta conversación hoy?' }
+  ];
+
+  function getQuestions() { return QUESTIONS; }
+
+  function saveSession(answers) {
+    const session = { id: `s_${Date.now()}`, date: new Date().toISOString(), answers };
+    StorageBrain.append(BUCKET, session);
+    return session;
+  }
+
+  function buildOpeningContext(answers) {
+    const moodLabels = { muy_mal: 'muy mal', mal: 'mal', neutral: 'neutral', bien: 'bien', muy_bien: 'muy bien' };
+    const moodText = moodLabels[answers.mood] || 'algo intermedio';
+    const combinedTextForRiskCheck = `${answers.thoughts || ''} ${answers.expectation || ''}`;
+
+    let opening = `Gracias por contarme eso 💙 Veo que hoy te sientes ${moodText}.`;
+    if (answers.thoughts && answers.thoughts.trim()) {
+      opening += ' Empecemos por ahí, cuando tú quieras, sin apuro.';
+    } else {
+      opening += ' Estoy aquí para acompañarte, a tu ritmo y con todo el cariño.';
+    }
+
+    return { opening, combinedTextForRiskCheck };
+  }
+
+  return { getQuestions, saveSession, buildOpeningContext };
+})();
+</script>
+
+<!-- ================================================================ -->
+<!-- CEREBRO 3: RiskBrain — detección de riesgo, siempre conservador   -->
+<!-- ================================================================ -->
+<script>
+const RiskBrain = (() => {
+  const RISK_PATTERNS = [
+    'quiero morir', 'quiero morirme', 'no quiero vivir', 'no quiero seguir viviendo',
+    'ya no quiero existir', 'quiero desaparecer', 'quiero matarme', 'quitarme la vida',
+    'suicid', 'me quiero morir', 'no vale la pena vivir', 'no aguanto mas',
+    'no tiene sentido seguir', 'mejor no estar', 'hacerme dano', 'lastimarme',
+    'cortarme', 'autolesion', 'no quiero estar aqui', 'todos estarian mejor sin mi',
+    'ya no puedo mas', 'no encuentro salida', 'quiero acabar con todo'
+  ];
+
+  function _normalize(text) {
+    return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function assess(text) {
+    if (!text || typeof text !== 'string') return { atRisk: false, matched: null };
+    const normalized = _normalize(text);
+    const hit = RISK_PATTERNS.find((p) => normalized.includes(_normalize(p)));
+    return { atRisk: Boolean(hit), matched: hit || null };
+  }
+
+  function getHelpResources() {
+    const openers = [
+      'Quiero que sepas que no tienes que pasar por esto solo/a.',
+      'Lo que sientes importa, y hay personas preparadas para ayudarte ahora mismo.',
+      'Esto suena muy pesado de cargar solo/a. Hay ayuda real y gratuita disponible.'
+    ];
+    const opener = openers[Math.floor(Math.random() * openers.length)];
+
+    return {
+      opener,
+      resources: [
+        { label: 'Línea 113, opción 5 (MINSA)', detail: 'Orientación en salud mental, gratis, 24/7, desde cualquier operador del Perú.' },
+        { label: 'SAMU - 106', detail: 'Si hay riesgo de vida inmediato, para emergencia médica.' },
+        { label: 'Una persona de confianza', detail: 'Familiar, amigo/a o profesional cercano a quien puedas contarle esto ahora.' }
+      ],
+      closing: 'Si estás en peligro inmediato, por favor contacta a estos números o acude a la emergencia más cercana ahora mismo.'
+    };
+  }
+
+  return { assess, getHelpResources };
+})();
+</script>
+
+<!-- ================================================================ -->
+<!-- CEREBRO 4: EmotionBrain — registro emocional y métricas           -->
+<!-- ================================================================ -->
+<script>
+const EmotionBrain = (() => {
+  const BUCKET = 'emotion_entries';
+  const MOOD_SCALE = { muy_mal: 1, mal: 2, neutral: 3, bien: 4, muy_bien: 5 };
+  const MOOD_LABELS = { muy_mal: '😞 Muy mal', mal: '🙁 Mal', neutral: '😐 Neutral', bien: '🙂 Bien', muy_bien: '😄 Muy bien' };
+
+  function logEntry({ mood, note = '', stressLevel = null, energyLevel = null }) {
+    const entry = { id: `e_${Date.now()}`, date: new Date().toISOString(), mood, note, stressLevel, energyLevel };
+    StorageBrain.append(BUCKET, entry);
+    return entry;
+  }
+
+  function getEntries() {
+    return StorageBrain.getAll(BUCKET).sort((a, b) => new Date(b.date) - new Date(a.date));
+  }
+
+  function getEntriesLastNDays(n) {
+    const cutoff = Date.now() - n * 24 * 60 * 60 * 1000;
+    return getEntries().filter((e) => new Date(e.date).getTime() >= cutoff);
+  }
+
+  function getWeeklyAverage() {
+    const week = getEntriesLastNDays(7);
+    if (week.length === 0) return null;
+    const sum = week.reduce((acc, e) => acc + (MOOD_SCALE[e.mood] || 3), 0);
+    return Math.round((sum / week.length) * 10) / 10;
+  }
+
+  function getStreak() {
+    const entries = getEntries();
+    if (entries.length === 0) return 0;
+    const daysWithEntry = new Set(entries.map((e) => new Date(e.date).toDateString()));
+    let streak = 0;
+    let cursor = new Date();
+    while (daysWithEntry.has(cursor.toDateString())) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return streak;
+  }
+
+  function getHardestDayOfWeek() {
+    const entries = getEntries();
+    if (entries.length < 3) return null;
+    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const totals = Array(7).fill(0);
+    const counts = Array(7).fill(0);
+    entries.forEach((e) => {
+      const day = new Date(e.date).getDay();
+      totals[day] += MOOD_SCALE[e.mood] || 3;
+      counts[day] += 1;
+    });
+    let worstDay = null;
+    let worstAvg = Infinity;
+    for (let i = 0; i < 7; i++) {
+      if (counts[i] === 0) continue;
+      const avg = totals[i] / counts[i];
+      if (avg < worstAvg) { worstAvg = avg; worstDay = dayNames[i]; }
+    }
+    return worstDay;
+  }
+
+  return { MOOD_LABELS, logEntry, getEntries, getEntriesLastNDays, getWeeklyAverage, getStreak, getHardestDayOfWeek };
+})();
+</script>
+
+<!-- ================================================================ -->
+<!-- CEREBRO 5: WellnessBrain — ejercicios de respiración              -->
+<!-- ================================================================ -->
+<script>
+const WellnessBrain = (() => {
+  const EXERCISES = {
+    calma_478: {
+      name: 'Respiración 4-7-8',
+      description: 'Calma el sistema nervioso en pocos ciclos.',
+      phases: [{ label: 'Inhala', seconds: 4 }, { label: 'Sostén', seconds: 7 }, { label: 'Exhala', seconds: 8 }],
+      cycles: 4
+    },
+    caja: {
+      name: 'Respiración cuadrada',
+      description: 'Usada por atletas y militares para enfocar la mente.',
+      phases: [{ label: 'Inhala', seconds: 4 }, { label: 'Sostén', seconds: 4 }, { label: 'Exhala', seconds: 4 }, { label: 'Sostén', seconds: 4 }],
+      cycles: 5
+    }
+  };
+
+  let activeTimer = null;
+
+  function listExercises() {
+    return Object.entries(EXERCISES).map(([id, ex]) => ({ id, ...ex }));
+  }
+
+  function run(exerciseId, { onPhase, onComplete, onTick } = {}) {
+    stop();
+    const exercise = EXERCISES[exerciseId];
+    if (!exercise) throw new Error(`Ejercicio desconocido: ${exerciseId}`);
+
+    let cycle = 0;
+    let phaseIdx = 0;
+    let secondsLeft = exercise.phases[0].seconds;
+
+    if (onPhase) onPhase(exercise.phases[0].label, secondsLeft, cycle);
+
+    activeTimer = setInterval(() => {
+      secondsLeft -= 1;
+      if (onTick) onTick(secondsLeft);
+
+      if (secondsLeft <= 0) {
+        phaseIdx += 1;
+        if (phaseIdx >= exercise.phases.length) { phaseIdx = 0; cycle += 1; }
+        if (cycle >= exercise.cycles) { stop(); if (onComplete) onComplete(); return; }
+        secondsLeft = exercise.phases[phaseIdx].seconds;
+        if (onPhase) onPhase(exercise.phases[phaseIdx].label, secondsLeft, cycle);
+      }
+    }, 1000);
+  }
+
+  function stop() {
+    if (activeTimer) { clearInterval(activeTimer); activeTimer = null; }
+  }
+
+  return { listExercises, run, stop };
+})();
+</script>
+
+<!-- ================================================================ -->
+<!-- CEREBRO 6: ChatBrain — conversación empática (motor local)        -->
+<!-- ================================================================ -->
+<script>
+const ChatBrain = (() => {
+  const EMOTION_KEYWORDS = {
+    tristeza: ['triste', 'deprimido', 'deprimida', 'bajon', 'llorar', 'solo', 'sola', 'vacio'],
+    ansiedad: ['ansioso', 'ansiosa', 'nervioso', 'nerviosa', 'preocupado', 'preocupada', 'estres', 'estresado', 'abrumado', 'abrumada'],
+    enojo: ['enojado', 'enojada', 'furioso', 'furiosa', 'rabia', 'harto', 'harta', 'molesto', 'molesta'],
+    alegria: ['feliz', 'contento', 'contenta', 'bien', 'genial', 'orgulloso', 'orgullosa', 'motivado', 'motivada'],
+    cansancio: ['cansado', 'cansada', 'agotado', 'agotada', 'sin energia', 'exhausto', 'exhausta']
+  };
+
+  const RESPONSES = {
+    tristeza: [
+      'Ay, siento mucho que te sientas así 💙 Gracias por confiar en mí para contármelo. ¿Quieres contarme qué pasó?',
+      'Está bien sentirse así, de verdad. No estás solo/a en esto. ¿Desde cuándo te sientes de esta manera?',
+      'Te escucho con todo el cariño. A veces solo hace falta soltarlo. ¿Qué es lo que más te pesa ahorita?'
+    ],
+    ansiedad: [
+      'Uy, eso suena agotador para la mente y el cuerpo 🌿 ¿Qué es lo que más te preocupa en este momento?',
+      'Tiene todo el sentido sentirse así con tanto encima. Vamos con calma, un paso a la vez. ¿Quieres que hagamos juntos un ejercicio de respiración?',
+      'Respira, estoy aquí contigo. ¿Me cuentas qué es lo que te tiene tan inquieto/a?'
+    ],
+    enojo: [
+      'Se nota que esto te afectó de verdad, y es totalmente válido sentirlo. ¿Qué fue lo que pasó?',
+      'Tu rabia tiene sentido, no tienes que disculparte por sentirla. Cuéntame más si quieres.',
+      'Entiendo que estés molesto/a. Aquí puedes soltarlo sin filtro, te escucho.'
+    ],
+    alegria: [
+      '¡Qué lindo leer eso! 😊 Me alegra muchísimo por ti. ¿Qué fue lo que más disfrutaste?',
+      'Eso me llena el corazón. ¿Quieres anotarlo en tu diario para recordarlo en un día difícil?',
+      '¡Qué bonito! Cuéntame más, quiero saber todos los detalles 💛'
+    ],
+    cansancio: [
+      'Suena como que de verdad necesitas un respiro, y te lo mereces 🌙 ¿Has podido descansar últimamente?',
+      'El cansancio acumulado pesa más de lo que parece. ¿Probamos un ejercicio cortito de relajación juntos?',
+      'Cuídate, por favor. ¿Qué pequeña cosa te ayudaría a sentirte un poco mejor ahorita?'
+    ],
+    neutral: [
+      'Cuéntame más, te escucho con toda la calma del mundo 💙',
+      '¿Cómo te gustaría que te acompañe hoy?',
+      'Aquí estoy, sin apuro. ¿Qué tienes en mente?',
+      'Me da mucho gusto que estés aquí. ¿Qué quieres compartir hoy?'
+    ]
+  };
+
+  function detectEmotion(text) {
+    const normalized = text.toLowerCase();
+    for (const [emotion, keywords] of Object.entries(EMOTION_KEYWORDS)) {
+      if (keywords.some((k) => normalized.includes(k))) return emotion;
+    }
+    return 'neutral';
+  }
+
+  const SYSTEM_PROMPT = `Eres el acompañante emocional de la app "Refugio", una app de bienestar peruana.
+Hablas español de Perú, cálido, dulce y cercano — como una amiga o amigo de confianza, nunca como un robot ni como un terapeuta clínico.
+Tu trabajo es escuchar, validar lo que la persona siente, y hacer una pregunta suave para que siga contando si quiere.
+No das diagnósticos ni consejos médicos. No tienes que resolver todo — a veces solo acompañar ya ayuda.
+Mantén tus respuestas cortas: 2 a 4 oraciones, tono suave y humano, sin sonar formal ni robótico.`;
+
+  async function generateResponse(text, history = [], apiKey = null) {
+    if (!apiKey) {
+      const emotion = detectEmotion(text);
+      const options = RESPONSES[emotion] || RESPONSES.neutral;
+      const reply = options[Math.floor(Math.random() * options.length)];
+      return { emotion, reply, source: 'local-fallback' };
+    }
+
+    try {
+      const messages = [
+        { role: 'system', content: SYSTEM_PROMPT },
+        ...history,
+        { role: 'user', content: text }
+      ];
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          max_tokens: 300,
+          messages
+        })
+      });
+
+      if (!response.ok) throw new Error(`Groq API respondió ${response.status}`);
+      const data = await response.json();
+      const reply = (data.choices?.[0]?.message?.content || '').trim();
+
+      if (!reply) throw new Error('Respuesta vacía de Groq');
+      return { emotion: detectEmotion(text), reply, source: 'groq-api' };
+    } catch (err) {
+      console.warn('ChatBrain: usando motor local de respaldo por error de API:', err);
+      const emotion = detectEmotion(text);
+      const options = RESPONSES[emotion] || RESPONSES.neutral;
+      const reply = options[Math.floor(Math.random() * options.length)];
+      return { emotion, reply, source: 'local-fallback' };
+    }
+  }
+
+  return { detectEmotion, generateResponse };
+})();
+</script>
+
+<!-- ================================================================ -->
+<!-- ORQUESTADOR: conecta los cerebros con la interfaz (sin lógica propia) -->
+<!-- ================================================================ -->
+<script>
+// ---------- CARGA INICIAL (10s): configura la IA sola, luego muestra la bienvenida ----------
+const loadingOverlay = document.getElementById('loading-overlay');
+const loadingStatus = document.getElementById('loading-status');
+
+const loadingMessages = [
+  'Preparando tu espacio de bienestar...',
+  'Configurando tu acompañante...',
+  'Casi listo...'
+];
+
+// ---------- PANTALLA: conseguir API key propia de Groq ----------
+const groqkeyOverlay = document.getElementById('groqkey-overlay');
+const groqkeyInput = document.getElementById('groqkey-input');
+
+function startLoadingSequence() {
+  groqkeyOverlay.style.display = 'none';
+  loadingOverlay.style.display = 'flex';
+
+  let loadingMsgIndex = 0;
+  const loadingMsgInterval = setInterval(() => {
+    loadingMsgIndex = (loadingMsgIndex + 1) % loadingMessages.length;
+    loadingStatus.textContent = loadingMessages[loadingMsgIndex];
+  }, 3300);
+
+  setTimeout(() => {
+    clearInterval(loadingMsgInterval);
+    SetupBrain.ensureGroqKeyConfigured();
+    loadingOverlay.style.display = 'none';
+    welcomeOverlay.style.display = 'flex';
+  }, 10000);
+}
+
+document.getElementById('groqkey-save').addEventListener('click', () => {
+  const key = groqkeyInput.value.trim();
+  if (!key) { alert('Pega tu API key antes de continuar, o dale a "omitir".'); return; }
+  StorageBrain.setValue('groq_api_key', key);
+  startLoadingSequence();
+});
+
+document.getElementById('groqkey-skip').addEventListener('click', startLoadingSequence);
+
+// Si ya hay una key guardada (de una visita anterior), nos saltamos esta pantalla.
+const alreadyHasKey = StorageBrain.getValue('groq_api_key', null);
+if (alreadyHasKey) {
+  groqkeyOverlay.style.display = 'none';
+  startLoadingSequence();
+}
+
+// ---------- BIENVENIDA (una pregunta a la vez) ----------
+const welcomeOverlay = document.getElementById('welcome-overlay');
+const appShell = document.getElementById('app-shell');
+const welcomeStepsEl = document.getElementById('welcome-steps');
+const welcomeProgressEl = document.getElementById('welcome-progress');
+const welcomeNextBtn = document.getElementById('welcome-next');
+const welcomeBackBtn = document.getElementById('welcome-back');
+
+const welcomeQuestions = OnboardingBrain.getQuestions();
+let welcomeIndex = 0;
+const welcomeAnswers = {};
+
+function renderWelcomeSteps() {
+  welcomeStepsEl.innerHTML = welcomeQuestions.map((q, i) => {
+    const stepClass = i === welcomeIndex ? 'welcome-step active' : 'welcome-step';
+    if (q.type === 'mood') {
+      return `
+        <div class="${stepClass}" data-step="${i}">
+          <div class="welcome-eyebrow">${q.eyebrow}</div>
+          <p class="welcome-question">${q.prompt}</p>
+          <div class="welcome-mood-row">
+            <button class="mood-btn" data-welcome-mood="muy_mal">😞</button>
+            <button class="mood-btn" data-welcome-mood="mal">🙁</button>
+            <button class="mood-btn" data-welcome-mood="neutral">😐</button>
+            <button class="mood-btn" data-welcome-mood="bien">🙂</button>
+            <button class="mood-btn" data-welcome-mood="muy_bien">😄</button>
+          </div>
+        </div>`;
+    }
+    return `
+      <div class="${stepClass}" data-step="${i}">
+        <div class="welcome-eyebrow">${q.eyebrow}</div>
+        <p class="welcome-question">${q.prompt}</p>
+        <textarea class="welcome-textarea" data-welcome-text="${q.id}" placeholder="Escribe lo que quieras (opcional)..."></textarea>
+      </div>`;
+  }).join('');
+
+  welcomeProgressEl.innerHTML = welcomeQuestions.map((_, i) => `<div class="dot ${i < welcomeIndex ? 'done' : ''}"></div>`).join('');
+
+  welcomeStepsEl.querySelectorAll('[data-welcome-mood]').forEach((btn) => {
+    if (welcomeAnswers.mood === btn.dataset.welcomeMood) btn.classList.add('selected');
+    btn.addEventListener('click', () => {
+      welcomeStepsEl.querySelectorAll('[data-welcome-mood]').forEach((b) => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      welcomeAnswers.mood = btn.dataset.welcomeMood;
+    });
+  });
+
+  welcomeStepsEl.querySelectorAll('[data-welcome-text]').forEach((ta) => {
+    const key = ta.dataset.welcomeText;
+    if (welcomeAnswers[key]) ta.value = welcomeAnswers[key];
+  });
+
+  welcomeBackBtn.style.display = welcomeIndex === 0 ? 'none' : 'inline-block';
+  welcomeNextBtn.textContent = welcomeIndex === welcomeQuestions.length - 1 ? 'Empezar' : 'Continuar';
+}
+
+function collectCurrentStepAnswer() {
+  const q = welcomeQuestions[welcomeIndex];
+  if (q.type === 'text') {
+    const ta = welcomeStepsEl.querySelector(`[data-welcome-text="${q.id}"]`);
+    welcomeAnswers[q.id] = ta ? ta.value.trim() : '';
+  }
+}
+
+welcomeNextBtn.addEventListener('click', () => {
+  collectCurrentStepAnswer();
+
+  if (welcomeIndex < welcomeQuestions.length - 1) {
+    welcomeIndex += 1;
+    renderWelcomeSteps();
+    return;
+  }
+
+  OnboardingBrain.saveSession(welcomeAnswers);
+  const { opening, combinedTextForRiskCheck } = OnboardingBrain.buildOpeningContext(welcomeAnswers);
+
+  welcomeOverlay.style.display = 'none';
+  appShell.style.display = 'flex';
+
+  appendMessage(opening, 'ai');
+  const risk = RiskBrain.assess(combinedTextForRiskCheck);
+  if (risk.atRisk) appendRiskMessage(RiskBrain.getHelpResources());
+});
+
+welcomeBackBtn.addEventListener('click', () => {
+  collectCurrentStepAnswer();
+  welcomeIndex = Math.max(0, welcomeIndex - 1);
+  renderWelcomeSteps();
+});
+
+renderWelcomeSteps();
+
+// ---------- Navegación entre pantallas ----------
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+  document.querySelector(`.nav-btn[data-screen="${name}"]`).classList.add('active');
+  if (name === 'diario') renderDiary();
+}
+
+// ---------- CHAT ----------
+const chatWindow = document.getElementById('chat-window');
+const chatInput = document.getElementById('chat-input');
+
+function appendMessage(text, cssClass) {
+  const div = document.createElement('div');
+  div.className = `msg ${cssClass}`;
+  div.textContent = text;
+  chatWindow.appendChild(div);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+  return div;
+}
+
+function appendRiskMessage(riskInfo) {
+  const div = document.createElement('div');
+  div.className = 'msg risk';
+  const list = riskInfo.resources.map((r) => `<li><strong>${r.label}</strong> — ${r.detail}</li>`).join('');
+  div.innerHTML = `${riskInfo.opener}<ul>${list}</ul><div style="margin-top:8px">${riskInfo.closing}</div>`;
+  chatWindow.appendChild(div);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+let chatHistory = [];
+
+function getGroqKey() {
+  return StorageBrain.getValue('groq_api_key', null);
+}
+
+document.getElementById('settings-api-btn').addEventListener('click', () => {
+  const current = getGroqKey();
+  const entered = prompt(
+    'Pega tu API key gratis de Groq (la consigues en console.groq.com → API Keys):',
+    current || ''
+  );
+  if (entered !== null && entered.trim()) {
+    StorageBrain.setValue('groq_api_key', entered.trim());
+    alert('Listo, guardada. Ya puedes chatear con la IA real.');
+  }
+});
+
+async function sendChatMessage() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  appendMessage(text, 'user');
+  chatInput.value = '';
+
+  const risk = RiskBrain.assess(text);
+  if (risk.atRisk) appendRiskMessage(RiskBrain.getHelpResources());
+
+  const typingEl = appendMessage('escribiendo...', 'ai');
+  typingEl.style.opacity = '0.6';
+
+  const { reply } = await ChatBrain.generateResponse(text, chatHistory, getGroqKey());
+
+  typingEl.textContent = reply;
+  typingEl.style.opacity = '1';
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+
+  chatHistory.push({ role: 'user', content: text });
+  chatHistory.push({ role: 'assistant', content: reply });
+}
+
+document.getElementById('chat-send').addEventListener('click', sendChatMessage);
+chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
+
+// ---------- DIARIO ----------
+let selectedMood = null;
+
+document.querySelectorAll('#screen-diario .mood-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#screen-diario .mood-btn').forEach((b) => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedMood = btn.dataset.mood;
+  });
+});
+
+document.getElementById('diary-save').addEventListener('click', () => {
+  if (!selectedMood) { alert('Elige cómo te sientes antes de guardar.'); return; }
+  const note = document.getElementById('diary-note').value.trim();
+  const risk = RiskBrain.assess(note);
+
+  EmotionBrain.logEntry({ mood: selectedMood, note });
+  document.getElementById('diary-note').value = '';
+  document.querySelectorAll('#screen-diario .mood-btn').forEach((b) => b.classList.remove('selected'));
+  selectedMood = null;
+
+  renderDiary();
+
+  if (risk.atRisk) {
+    const helpBox = document.getElementById('diary-risk-box');
+    const r = RiskBrain.getHelpResources();
+    helpBox.style.display = 'block';
+    helpBox.innerHTML = `<strong>${r.opener}</strong><ul>${r.resources.map((x) => `<li><strong>${x.label}</strong> — ${x.detail}</li>`).join('')}</ul><div>${r.closing}</div>`;
+  }
+});
+
+function renderDiary() {
+  const streak = EmotionBrain.getStreak();
+  const avg = EmotionBrain.getWeeklyAverage();
+  const hardest = EmotionBrain.getHardestDayOfWeek();
+
+  document.getElementById('stat-streak').textContent = streak;
+  document.getElementById('stat-avg').textContent = avg !== null ? avg : '—';
+  document.getElementById('stat-hardest').textContent = hardest || '—';
+  document.getElementById('sidebar-streak').textContent = streak;
+
+  const container = document.getElementById('diary-entries');
+  container.innerHTML = '';
+  EmotionBrain.getEntries().slice(0, 15).forEach((entry) => {
+    const card = document.createElement('div');
+    card.className = 'diary-card';
+    const date = new Date(entry.date).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' });
+    card.innerHTML = `<div class="meta">${date} · ${EmotionBrain.MOOD_LABELS[entry.mood] || entry.mood}</div><div>${entry.note ? entry.note : '<em style="color:var(--ink-soft)">Sin nota</em>'}</div>`;
+    container.appendChild(card);
+  });
+}
+
+// ---------- EJERCICIOS ----------
+const overlay = document.getElementById('breathing-overlay');
+const circle = document.getElementById('breathing-circle');
+const phaseLabel = document.getElementById('phase-label');
+const timerLabel = document.getElementById('timer-label');
+
+function openExercise(id) {
+  overlay.classList.add('active');
+  WellnessBrain.run(id, {
+    onPhase: (label) => {
+      phaseLabel.textContent = label;
+      circle.classList.remove('inhale', 'exhale');
+      if (label === 'Inhala') circle.classList.add('inhale');
+      if (label === 'Exhala') circle.classList.add('exhale');
+    },
+    onTick: (secondsLeft) => { timerLabel.textContent = `${secondsLeft + 1}s`; },
+    onComplete: () => {
+      phaseLabel.textContent = '¡Listo! 🌿';
+      timerLabel.textContent = '';
+      setTimeout(() => overlay.classList.remove('active'), 1500);
+    }
+  });
+}
+
+document.getElementById('breathing-close').addEventListener('click', () => {
+  WellnessBrain.stop();
+  overlay.classList.remove('active');
+});
+
+function renderExercises() {
+  const grid = document.getElementById('exercise-grid');
+  grid.innerHTML = '';
+  WellnessBrain.listExercises().forEach((ex) => {
+    const card = document.createElement('div');
+    card.className = 'exercise-card';
+    card.innerHTML = `<h3>${ex.name}</h3><p>${ex.description}</p>`;
+    card.addEventListener('click', () => openExercise(ex.id));
+    grid.appendChild(card);
+  });
+}
+
+renderExercises();
+renderDiary();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch((err) => {
+      console.warn('No se pudo registrar el service worker (necesita https):', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
