@@ -1,4 +1,4 @@
-const CACHE_NAME = 'refugio-v5';
+const CACHE_NAME = 'refugio-v6';
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',
