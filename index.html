@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Refugio — MVP</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#3E7CA6">
 <link rel="icon" href="icon-192.png">
@@ -29,6 +31,20 @@
   --radius-lg: 28px;
   --radius-md: 18px;
   --radius-sm: 12px;
+}
+
+body.dark-mode {
+  --cream: #16202A;
+  --cream-deep: #1E2C38;
+  --clay: #5A9BC4;
+  --clay-deep: #7FB4D9;
+  --sage: #6FA9A3;
+  --sage-deep: #8CC4BE;
+  --ink: #E9F1F7;
+  --ink-soft: #9DB0BE;
+  --card: #1C2833;
+  --line: rgba(233, 241, 247, 0.09);
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
 * { box-sizing: border-box; }
@@ -356,6 +372,51 @@ textarea#diary-note:focus { border-color: var(--clay); }
 .breathing-circle.inhale { transform: scale(1.25); }
 .breathing-circle.exhale { transform: scale(0.85); }
 
+.guided-text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink);
+  margin: 24px 0;
+  min-height: 80px;
+}
+
+.chart-card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 20px 22px;
+  margin-bottom: 22px;
+}
+
+.chart-title {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 0 0 12px 0;
+}
+
+.badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.badge-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+}
+
+.badge-chip.locked {
+  opacity: 0.4;
+}
+
 .timer-label { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
 
 /* ---------- Bienvenida: una pregunta a la vez ---------- */
@@ -612,6 +673,9 @@ textarea#diary-note:focus { border-color: var(--clay); }
     </div>
 
     <button class="nav-btn" id="settings-api-btn" style="margin-top:6px">⚙️ API key de Groq</button>
+    <button class="nav-btn" id="dark-mode-btn">🌙 Modo oscuro</button>
+    <button class="nav-btn" id="privacy-btn">🔒 Tu privacidad</button>
+    <button class="nav-btn" id="export-pdf-btn">📄 Exportar diario</button>
   </aside>
 
   <main class="main">
@@ -647,6 +711,13 @@ textarea#diary-note:focus { border-color: var(--clay); }
         <div class="stat-card"><div class="value" id="stat-hardest">—</div><div class="label">Día más difícil</div></div>
       </div>
 
+      <div class="chart-card">
+        <p class="chart-title">Tu ánimo en los últimos 30 días</p>
+        <canvas id="mood-chart" height="90"></canvas>
+      </div>
+
+      <div class="badges-row" id="badges-row"></div>
+
       <div class="mood-picker">
         <button class="mood-btn" data-mood="muy_mal">😞</button>
         <button class="mood-btn" data-mood="mal">🙁</button>
@@ -675,6 +746,7 @@ textarea#diary-note:focus { border-color: var(--clay); }
   <div class="breathing-card">
     <h2 id="phase-label">Inhala</h2>
     <div class="breathing-circle" id="breathing-circle"></div>
+    <p class="guided-text" id="guided-text" style="display:none"></p>
     <div class="timer-label" id="timer-label"></div>
     <button class="btn" id="breathing-close" style="margin-top:16px">Cerrar</button>
   </div>
@@ -996,22 +1068,77 @@ const ProgressBrain = (() => {
 </script>
 
 <!-- ================================================================ -->
+<!-- CEREBRO 4c: AchievementsBrain — insignias por logros              -->
+<!-- ================================================================ -->
+<script>
+/**
+ * AchievementsBrain
+ * -----------------
+ * Define las insignias disponibles y decide cuáles ya se ganaron,
+ * a partir de datos que le pasan EmotionBrain y WellnessBrain (no los
+ * consulta directo, para no acoplarse a su forma interna).
+ */
+const AchievementsBrain = (() => {
+  const BADGES = [
+    { id: 'primera_entrada', icon: '📝', label: 'Primera entrada', check: (d) => d.totalEntries >= 1 },
+    { id: 'racha_7', icon: '🔥', label: '7 días de racha', check: (d) => d.streak >= 7 },
+    { id: 'racha_30', icon: '🏆', label: '30 días de racha', check: (d) => d.streak >= 30 },
+    { id: 'primer_ejercicio', icon: '🌿', label: 'Primer ejercicio', check: (d) => d.exercisesCompleted >= 1 },
+    { id: 'cinco_ejercicios', icon: '🌸', label: '5 ejercicios completados', check: (d) => d.exercisesCompleted >= 5 }
+  ];
+
+  function getBadgeStates(data) {
+    return BADGES.map((b) => ({ ...b, unlocked: b.check(data) }));
+  }
+
+  return { getBadgeStates };
+})();
+</script>
+
+<!-- ================================================================ -->
 <!-- CEREBRO 5: WellnessBrain — ejercicios de respiración              -->
 <!-- ================================================================ -->
 <script>
 const WellnessBrain = (() => {
   const EXERCISES = {
     calma_478: {
+      type: 'breath',
       name: 'Respiración 4-7-8',
       description: 'Calma el sistema nervioso en pocos ciclos.',
       phases: [{ label: 'Inhala', seconds: 4 }, { label: 'Sostén', seconds: 7 }, { label: 'Exhala', seconds: 8 }],
       cycles: 4
     },
     caja: {
+      type: 'breath',
       name: 'Respiración cuadrada',
       description: 'Usada por atletas y militares para enfocar la mente.',
       phases: [{ label: 'Inhala', seconds: 4 }, { label: 'Sostén', seconds: 4 }, { label: 'Exhala', seconds: 4 }, { label: 'Sostén', seconds: 4 }],
       cycles: 5
+    },
+    meditacion_guiada: {
+      type: 'guided',
+      name: 'Meditación guiada',
+      description: 'Un momento corto de calma y presencia.',
+      steps: [
+        { text: 'Cierra los ojos si te sientes cómodo/a, y solo nota tu respiración natural.', seconds: 18 },
+        { text: 'Sin cambiar nada, nota los sonidos a tu alrededor. No hay nada que resolver ahora.', seconds: 18 },
+        { text: 'Lleva tu atención a cómo se siente tu cuerpo en este momento, sin juzgarlo.', seconds: 20 },
+        { text: 'Piensa en algo pequeño por lo que te sientas agradecido/a hoy.', seconds: 18 },
+        { text: 'Respira profundo una vez más, y abre los ojos cuando estés listo/a.', seconds: 12 }
+      ]
+    },
+    relajacion_muscular: {
+      type: 'guided',
+      name: 'Relajación muscular',
+      description: 'Tensa y suelta cada grupo muscular para soltar tensión física.',
+      steps: [
+        { text: 'Tensa los músculos de tu cara con fuerza por unos segundos... y suelta.', seconds: 10 },
+        { text: 'Sube los hombros hacia tus orejas, tensa... y suelta, dejándolos caer.', seconds: 10 },
+        { text: 'Aprieta los puños con fuerza... y suelta los dedos poco a poco.', seconds: 10 },
+        { text: 'Tensa el abdomen como si te fueran a empujar... y suelta.', seconds: 10 },
+        { text: 'Tensa piernas y pies, estira los dedos... y suelta.', seconds: 10 },
+        { text: 'Nota cómo se siente todo tu cuerpo ahora, más pesado y relajado.', seconds: 15 }
+      ]
     }
   };
 
@@ -1026,6 +1153,14 @@ const WellnessBrain = (() => {
     const exercise = EXERCISES[exerciseId];
     if (!exercise) throw new Error(`Ejercicio desconocido: ${exerciseId}`);
 
+    if (exercise.type === 'guided') {
+      _runGuided(exercise, { onPhase, onComplete, onTick });
+    } else {
+      _runBreath(exercise, { onPhase, onComplete, onTick });
+    }
+  }
+
+  function _runBreath(exercise, { onPhase, onComplete, onTick }) {
     let cycle = 0;
     let phaseIdx = 0;
     let secondsLeft = exercise.phases[0].seconds;
@@ -1042,6 +1177,25 @@ const WellnessBrain = (() => {
         if (cycle >= exercise.cycles) { stop(); if (onComplete) onComplete(); return; }
         secondsLeft = exercise.phases[phaseIdx].seconds;
         if (onPhase) onPhase(exercise.phases[phaseIdx].label, secondsLeft, cycle);
+      }
+    }, 1000);
+  }
+
+  function _runGuided(exercise, { onPhase, onComplete, onTick }) {
+    let stepIdx = 0;
+    let secondsLeft = exercise.steps[0].seconds;
+
+    if (onPhase) onPhase(exercise.steps[0].text, secondsLeft);
+
+    activeTimer = setInterval(() => {
+      secondsLeft -= 1;
+      if (onTick) onTick(secondsLeft);
+
+      if (secondsLeft <= 0) {
+        stepIdx += 1;
+        if (stepIdx >= exercise.steps.length) { stop(); if (onComplete) onComplete(); return; }
+        secondsLeft = exercise.steps[stepIdx].seconds;
+        if (onPhase) onPhase(exercise.steps[stepIdx].text, secondsLeft);
       }
     }, 1000);
   }
@@ -1074,7 +1228,8 @@ const ChatBrain = (() => {
       'Te escucho con todo el cariño. A veces solo hace falta soltarlo. ¿Qué es lo que más te pesa ahorita?',
       '¿Hay algo puntual que haya pasado hoy, o es más una sensación que se ha ido acumulando?',
       'A veces la tristeza tiene un motivo claro, y a veces no. ¿Sabes qué la disparó, o simplemente llegó así?',
-      'Te mereces sentirte acompañado/a en esto. ¿Hay alguien más en tu vida con quien hayas hablado de esto?'
+      'Te mereces sentirte acompañado/a en esto. ¿Hay alguien más en tu vida con quien hayas hablado de esto?',
+      'Está bien no tener ganas de hablar de más ahorita. Aquí estoy, sin apuro, el tiempo que necesites.'
     ],
     ansiedad: [
       'Uy, eso suena agotador para la mente y el cuerpo 🌿 ¿Qué es lo que más te preocupa en este momento?',
@@ -1082,7 +1237,8 @@ const ChatBrain = (() => {
       'Respira, estoy aquí contigo. ¿Me cuentas qué es lo que te tiene tan inquieto/a?',
       '¿Es algo que puedes controlar, o es más una preocupación sobre algo que todavía no pasa?',
       '¿Dónde sientes esa ansiedad en el cuerpo ahorita? A veces ponerle atención a eso ayuda a bajarla un poco.',
-      '¿Esto viene de algo puntual (un examen, una decisión, una noticia) o es más una sensación de fondo?'
+      '¿Esto viene de algo puntual (un examen, una decisión, una noticia) o es más una sensación de fondo?',
+      'Respira conmigo un momento. No necesitas explicarlo todo ahora, solo estar aquí ya está bien.'
     ],
     enojo: [
       'Se nota que esto te afectó de verdad, y es totalmente válido sentirlo. ¿Qué fue lo que pasó?',
@@ -1104,7 +1260,8 @@ const ChatBrain = (() => {
       'El cansancio acumulado pesa más de lo que parece. ¿Probamos un ejercicio cortito de relajación juntos?',
       'Cuídate, por favor. ¿Qué pequeña cosa te ayudaría a sentirte un poco mejor ahorita?',
       '¿Es más cansancio del cuerpo, o sientes que también es mental/emocional?',
-      '¿Hace cuánto que no te das un espacio solo para ti, sin hacer nada más?'
+      '¿Hace cuánto que no te das un espacio solo para ti, sin hacer nada más?',
+      'Descansa si puedes, de verdad. No tienes que rendir al cien por ciento todo el tiempo.'
     ],
     neutral: [
       'Cuéntame más, te escucho con toda la calma del mundo 💙',
@@ -1129,6 +1286,7 @@ Hablas español de Perú, cálido, dulce y cercano — como una amiga o amigo de
 Tu trabajo es escuchar de verdad y hacer UNA pregunta de seguimiento genuina y específica según lo que la persona acaba de contar — no una pregunta genérica de relleno.
 Adapta tu pregunta a la emoción detectada: si hay tristeza, pregunta con delicadeza qué la originó o hace cuánto se siente así; si hay ansiedad, pregunta qué la dispara o dónde la siente en el cuerpo; si hay enojo, pregunta qué necesitaba que fuera distinto; si hay alegría, celebra y pregunta con quién lo compartiría.
 Valida la emoción antes de preguntar (una frase corta), nunca la minimices ni la arregles de inmediato.
+Si la persona responde con muy pocas palabras o parece sin ánimo de profundizar, no insistas con otra pregunta — valida y ofrece tu compañía en silencio, sin presionar.
 No tienes que resolver todo — a veces solo acompañar ya ayuda.
 Mantén tus respuestas cortas: 2 a 4 oraciones, tono suave y humano, sin sonar formal ni robótico ni como cuestionario.`;
 
@@ -1444,6 +1602,75 @@ document.getElementById('settings-api-btn').addEventListener('click', () => {
   }
 });
 
+// ---------- Modo oscuro ----------
+const darkModeBtn = document.getElementById('dark-mode-btn');
+
+function applyDarkMode(enabled) {
+  document.body.classList.toggle('dark-mode', enabled);
+  darkModeBtn.textContent = enabled ? '☀️ Modo claro' : '🌙 Modo oscuro';
+  if (document.getElementById('screen-diario').classList.contains('active')) renderDiary();
+}
+
+const savedDarkMode = StorageBrain.getValue('dark_mode', 'false') === 'true';
+applyDarkMode(savedDarkMode);
+
+darkModeBtn.addEventListener('click', () => {
+  const isDark = !document.body.classList.contains('dark-mode');
+  StorageBrain.setValue('dark_mode', String(isDark));
+  applyDarkMode(isDark);
+});
+
+// ---------- Privacidad ----------
+document.getElementById('privacy-btn').addEventListener('click', () => {
+  alert(
+    'Tu privacidad en Refugio:\n\n' +
+    '• Tu diario y tus notas se guardan solo en este navegador (localStorage), no en un servidor nuestro.\n' +
+    '• Los mensajes del chat se envían a Groq (el proveedor de la IA) únicamente para generar la respuesta — no los vendemos ni compartimos con nadie más.\n' +
+    '• Si borras los datos del navegador o cambias de celular, tu historial se pierde (todavía no hay respaldo en la nube).\n' +
+    '• Nadie más puede ver lo que escribes aquí.'
+  );
+});
+
+// ---------- Exportar diario a PDF ----------
+document.getElementById('export-pdf-btn').addEventListener('click', () => {
+  if (typeof window.jspdf === 'undefined') {
+    alert('No se pudo cargar el generador de PDF. Revisa tu conexión a internet e intenta de nuevo.');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const entries = EmotionBrain.getEntries();
+
+  doc.setFontSize(18);
+  doc.text('Mi diario — Refugio', 14, 20);
+  doc.setFontSize(10);
+  doc.setTextColor(120);
+  doc.text(`Exportado el ${new Date().toLocaleDateString('es-PE')}`, 14, 27);
+
+  let y = 38;
+  doc.setTextColor(30);
+  entries.forEach((entry) => {
+    if (y > 275) { doc.addPage(); y = 20; }
+    const date = new Date(entry.date).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' });
+    const moodText = (EmotionBrain.MOOD_LABELS[entry.mood] || entry.mood).replace(/[^\x00-\x7F]/g, '').trim();
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text(`${date} — ${moodText}`, 14, y);
+    y += 6;
+    doc.setFont(undefined, 'normal');
+    const noteLines = doc.splitTextToSize(entry.note || 'Sin nota', 180);
+    doc.text(noteLines, 14, y);
+    y += noteLines.length * 6 + 6;
+  });
+
+  if (entries.length === 0) {
+    doc.setFontSize(12);
+    doc.text('Todavía no tienes entradas guardadas.', 14, y);
+  }
+
+  doc.save('mi-diario-refugio.pdf');
+});
+
 async function sendChatMessage() {
   const text = chatInput.value.trim();
   if (!text) return;
@@ -1500,11 +1727,23 @@ document.getElementById('diary-save').addEventListener('click', () => {
 
   renderDiary();
 
+  const helpBox = document.getElementById('diary-risk-box');
+
   if (risk.atRisk) {
-    const helpBox = document.getElementById('diary-risk-box');
     const r = RiskBrain.getHelpResources();
     helpBox.style.display = 'block';
     helpBox.innerHTML = `<strong>${r.opener}</strong><ul>${r.resources.map((x) => `<li><strong>${x.label}</strong> — ${x.detail}</li>`).join('')}</ul><div>${r.closing}</div>`;
+  } else {
+    const recent = EmotionBrain.getEntries().slice(0, 3);
+    const allLow = recent.length === 3 && recent.every((e) => e.mood === 'mal' || e.mood === 'muy_mal');
+    if (allLow) {
+      helpBox.style.display = 'block';
+      helpBox.innerHTML =
+        '<strong>He notado que llevas varios días sintiéndote pesado/a 💙</strong>' +
+        '<div style="margin-top:6px">No tienes que resolverlo solo/a. ¿Has pensado en hablar de esto con alguien de confianza, o con un profesional? A veces ayuda muchísimo tener a alguien real acompañándote, además de este espacio.</div>';
+    } else {
+      helpBox.style.display = 'none';
+    }
   }
 });
 
@@ -1512,6 +1751,7 @@ function renderDiary() {
   const streak = EmotionBrain.getStreak();
   const avg = EmotionBrain.getWeeklyAverage();
   const hardest = EmotionBrain.getHardestDayOfWeek();
+  const entries = EmotionBrain.getEntries();
 
   document.getElementById('stat-streak').textContent = streak;
   document.getElementById('stat-avg').textContent = avg !== null ? avg : '—';
@@ -1525,9 +1765,12 @@ function renderDiary() {
   document.getElementById('progress-badge-desc').textContent = stage.desc;
   document.getElementById('progress-badge-fill').style.width = `${progressPct}%`;
 
+  renderMoodChart(entries);
+  renderBadges(entries.length);
+
   const container = document.getElementById('diary-entries');
   container.innerHTML = '';
-  EmotionBrain.getEntries().slice(0, 15).forEach((entry) => {
+  entries.slice(0, 15).forEach((entry) => {
     const card = document.createElement('div');
     card.className = 'diary-card';
     const date = new Date(entry.date).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' });
@@ -1536,25 +1779,106 @@ function renderDiary() {
   });
 }
 
+let moodChartInstance = null;
+
+function renderMoodChart(entries) {
+  const moodScale = { muy_mal: 1, mal: 2, neutral: 3, bien: 4, muy_bien: 5 };
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const recent = entries.filter((e) => new Date(e.date).getTime() >= cutoff).slice().reverse();
+
+  const labels = recent.map((e) => new Date(e.date).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' }));
+  const data = recent.map((e) => moodScale[e.mood] || 3);
+
+  const ctx = document.getElementById('mood-chart');
+  if (!ctx || typeof Chart === 'undefined') return;
+
+  if (moodChartInstance) moodChartInstance.destroy();
+
+  const styles = getComputedStyle(document.body);
+  const clayColor = styles.getPropertyValue('--clay').trim();
+  const inkSoftColor = styles.getPropertyValue('--ink-soft').trim();
+
+  moodChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels.length ? labels : ['Sin datos aún'],
+      datasets: [{
+        data: data.length ? data : [3],
+        borderColor: clayColor || '#3E7CA6',
+        backgroundColor: 'transparent',
+        tension: 0.35,
+        pointRadius: 3,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          min: 1, max: 5, ticks: {
+            stepSize: 1,
+            color: inkSoftColor || '#5C7284',
+            callback: (v) => ({ 1: '😞', 2: '🙁', 3: '😐', 4: '🙂', 5: '😄' }[v] || '')
+          },
+          grid: { display: false }
+        },
+        x: { ticks: { color: inkSoftColor || '#5C7284', maxRotation: 0 }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+function renderBadges(totalEntries) {
+  const streak = EmotionBrain.getStreak();
+  const exercisesCompleted = parseInt(StorageBrain.getValue('exercises_completed_count', '0'), 10) || 0;
+
+  const states = AchievementsBrain.getBadgeStates({ totalEntries, streak, exercisesCompleted });
+  const row = document.getElementById('badges-row');
+  row.innerHTML = '';
+  states.forEach((b) => {
+    const chip = document.createElement('div');
+    chip.className = `badge-chip ${b.unlocked ? '' : 'locked'}`;
+    chip.innerHTML = `<span>${b.icon}</span><span>${b.label}</span>`;
+    row.appendChild(chip);
+  });
+}
+
 // ---------- EJERCICIOS ----------
 const overlay = document.getElementById('breathing-overlay');
 const circle = document.getElementById('breathing-circle');
 const phaseLabel = document.getElementById('phase-label');
 const timerLabel = document.getElementById('timer-label');
+const guidedTextEl = document.getElementById('guided-text');
 
 function openExercise(id) {
+  const exercise = WellnessBrain.listExercises().find((e) => e.id === id);
+  const isGuided = exercise && exercise.type === 'guided';
+
+  circle.style.display = isGuided ? 'none' : 'block';
+  guidedTextEl.style.display = isGuided ? 'block' : 'none';
+  phaseLabel.textContent = isGuided ? exercise.name : 'Inhala';
+
   overlay.classList.add('active');
   WellnessBrain.run(id, {
     onPhase: (label) => {
-      phaseLabel.textContent = label;
-      circle.classList.remove('inhale', 'exhale');
-      if (label === 'Inhala') circle.classList.add('inhale');
-      if (label === 'Exhala') circle.classList.add('exhale');
+      if (isGuided) {
+        guidedTextEl.textContent = label;
+      } else {
+        phaseLabel.textContent = label;
+        circle.classList.remove('inhale', 'exhale');
+        if (label === 'Inhala') circle.classList.add('inhale');
+        if (label === 'Exhala') circle.classList.add('exhale');
+      }
     },
     onTick: (secondsLeft) => { timerLabel.textContent = `${secondsLeft + 1}s`; },
-    onComplete: () => {
-      phaseLabel.textContent = '¡Listo! 🌿';
+    onComplete: async () => {
+      if (isGuided) guidedTextEl.textContent = '¡Listo! 🌿';
+      else phaseLabel.textContent = '¡Listo! 🌿';
       timerLabel.textContent = '';
+
+      const current = parseInt((await StorageBrain.getValue('exercises_completed_count', '0')), 10) || 0;
+      await StorageBrain.setValue('exercises_completed_count', String(current + 1));
+
       setTimeout(() => overlay.classList.remove('active'), 1500);
     }
   });
