@@ -1,4 +1,4 @@
-const CACHE_NAME = 'refugio-v6';
+const CACHE_NAME = 'refugio-v7';
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',
@@ -22,11 +22,20 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Estrategia "red primero": siempre intenta traer la version mas nueva.
+// Solo usa la copia guardada si no hay internet (modo offline real).
+// Esto evita que la app se quede pegada en una version vieja.
 self.addEventListener('fetch', (event) => {
-  // Cache-first para lo propio de la app; para llamadas a Groq, va directo a la red.
   if (event.request.url.includes('api.groq.com')) return;
+  if (event.request.url.includes('cdnjs.cloudflare.com')) return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
